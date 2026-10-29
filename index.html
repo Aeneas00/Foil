@@ -103,6 +103,15 @@ input,select{border:2px solid var(--ink);border-radius:4px;background:var(--pape
 .mini{width:34px;height:34px;border:2px solid;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:none}
 .mini svg{width:70%;height:70%}
 .btn.wait{opacity:.6;cursor:progress}
+.tchip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink);border-radius:999px;padding:2px 10px 2px 3px;background:var(--bg);font-size:.8rem;margin:2px 4px 2px 0}
+.tchip .mini{width:22px;height:22px;border-radius:50%}
+.trade .side{margin:6px 0}
+.trade .side b{display:block;font:700 .68rem 'Space Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pick{cursor:pointer;border-radius:16px;position:relative}
+.pick:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.pick.on{outline:4px solid var(--accent);outline-offset:2px}
+.pick.on:after{content:'✓';position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:3}
+.pbar{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));background:var(--paper);border:2px solid var(--ink);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;z-index:5}
 .tools{display:flex;gap:2px}
 .fin{border:2px solid var(--good);background:#E3F5EA;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .fin .ck{width:32px;height:32px;border-radius:50%;background:var(--good);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none;animation:pop2 .45s cubic-bezier(.2,1.4,.4,1)}
@@ -133,7 +142,7 @@ const fmtDay = s => new Date(s + 'T12:00:00').toLocaleDateString('en-GB', {weekd
 const PRI = {1: 'High', 2: 'Medium', 3: 'Low'};
 
 const PUB = (function(){ const u = new URLSearchParams(location.search).get('u'); return u && /^[0-9a-f-]{36}$/i.test(u) ? u.toLowerCase() : null; })();
-const S = {pend: {}, fin: null, pub: null, user: null, profile: null, tasks: [], designs: [], cards: [], reveal: null, tab: 'today', auth: 'in', err: '', info: '', busy: false, tzTried: false};
+const S = {trades: [], tcards: {}, names: {}, tradesOk: true, mine: null, pt: {open: false, sent: false, give: {}, get: {}}, pubAuth: false, pend: {}, fin: null, pub: null, user: null, profile: null, tasks: [], designs: [], cards: [], reveal: null, tab: 'today', auth: 'in', err: '', info: '', busy: false, tzTried: false};
 
 /* ---- rules, mirrored from the server for display only. The server decides. ---- */
 const base = t => t.est_minutes == null ? 10 : ({1: 30, 2: 20}[t.priority] || 10);
@@ -196,8 +205,24 @@ async function load(){
   const bad = p.error || t.error || d.error || c.error;
   if (bad) { toast('Could not load: ' + bad.message); return; }
   S.profile = p.data; S.tasks = t.data; S.designs = d.data; S.cards = c.data;
+  await loadTrades();
   render();
   syncTz();
+}
+async function loadTrades(){
+  try {
+    const t = await sb.from('trades').select('*').order('created_at', {ascending: false}).limit(40);
+    if (t.error) { S.tradesOk = false; S.trades = []; return; }
+    S.tradesOk = true;
+    const ids = t.data.map(x => x.id);
+    const it = ids.length ? await sb.from('trade_items').select('*').in('trade_id', ids) : {data: [], error: null};
+    const items = it.error ? [] : it.data, cids = [], pids = {};
+    items.forEach(x => cids.push(x.card_id)); t.data.forEach(x => { pids[x.from_id] = 1; pids[x.to_id] = 1; });
+    const cr = cids.length ? await sb.from('cards').select('id,design_id,serial').in('id', cids) : {data: []};
+    const pr = await sb.from('profiles').select('id,name').in('id', Object.keys(pids));
+    (cr.data || []).forEach(c => { S.tcards[c.id] = c; }); (pr.data || []).forEach(x => { S.names[x.id] = x.name; });
+    S.trades = t.data.map(x => Object.assign({}, x, {items: items.filter(i => i.trade_id === x.id)}));
+  } catch (e) { S.tradesOk = false; S.trades = []; }
 }
 async function syncTz(){
   if (S.tzTried || !S.profile) return; S.tzTried = true;
@@ -329,7 +354,7 @@ function cardsView(){
   const owned = {}; mine.forEach(c => { owned[c.design_id] = 1; });
   const missing = S.designs.filter(d => !owned[d.id] && (!d.effect || d.effect === 'none')).sort((a, b) => tr(a) - tr(b) || a.name.localeCompare(b.name));
   return '<h2>Cards</h2><p class="sub">Designs found: <b>' + Object.keys(owned).length + ' of ' + S.designs.length + '</b> · Cards owned: <b>' + mine.length + '</b></p>' +
-    '<div class="row"><button class="btn primary" data-act="roll"' + (coins < 50 ? ' disabled' : '') + '>Roll a card · 50 coins</button>' + (coins < 50 ? '<span class="empty">You have ' + coins + '. Finish ' + Math.ceil((50 - coins) / 10) + '+ more tasks.</span>' : '') + '<button class="btn" data-act="share">Copy profile link</button></div>' +
+    '<div class="row"><button class="btn primary" data-act="roll"' + (coins < 50 ? ' disabled' : '') + '>Roll a card · 50 coins</button>' + (coins < 50 ? '<span class="empty">You have ' + coins + '. Finish ' + Math.ceil((50 - coins) / 10) + '+ more tasks.</span>' : '') + '<button class="btn" data-act="share">Share profile</button></div>' +
     (mine.length ? '<div class="grid">' + mine.map(c => cardHtml(m[c.design_id], c)).join('') + '</div>' : '<p class="empty" style="margin-top:14px">No cards yet. Earn 50 coins and roll.</p>') +
     (missing.length ? '<h3 class="mono">Not found yet (plain versions)</h3><div class="grid">' + missing.map(d => cardHtml(d, null)).join('') + '</div>' : '');
 }
@@ -342,6 +367,62 @@ function roll(){
   call('roll_card', {}, c => { S.reveal = c; });
 }
 
+/* ---- trades ---- */
+function miniD(d){
+  const x = TIERS[d.tier] || TIERS.base;
+  return '<span class="mini" style="background:' + x.win + ';border-color:' + x.ink + '"><svg viewBox="0 0 100 100" fill="none" stroke="' + (PAL[d.palette] || x.ink) + '" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (ART[d.icon] || '') + '" fill-rule="evenodd"/></svg></span>';
+}
+function tchip(cid){
+  const c = S.tcards[cid], d = c && dmap()[c.design_id];
+  if (!d) return '<span class="tchip">Unknown card</span>';
+  return '<span class="tchip">' + miniD(d) + esc(d.name) + ' #' + c.serial + (d.edition_size ? ' / ' + d.edition_size : '') + '</span>';
+}
+const tState = t => t.status === 'open' && new Date(t.expires_at).getTime() < Date.now() ? 'expired' : t.status;
+const nm = id => S.names[id] || 'A collector';
+const incoming = () => S.trades.filter(t => t.to_id === (S.user && S.user.id) && tState(t) === 'open');
+function tradeSides(t, who){
+  const a = t.items.filter(i => i.giver_id === t.from_id).map(i => tchip(i.card_id)).join('');
+  const b = t.items.filter(i => i.giver_id === t.to_id).map(i => tchip(i.card_id)).join('');
+  return '<div class="side"><b>' + (who === 'to' ? esc(nm(t.from_id)) + ' gives' : 'You give') + '</b>' + a + '</div><div class="side"><b>' + (who === 'to' ? 'You give' : esc(nm(t.to_id)) + ' gives') + '</b>' + b + '</div>';
+}
+function leftTxt(t){ const h = Math.max(1, Math.ceil((new Date(t.expires_at).getTime() - Date.now()) / 3600000)); return 'Expires in ' + h + ' h'; }
+function tradesView(){
+  if (!S.tradesOk) return '<h2>Trades</h2><p class="empty">Trading is not switched on yet.</p>';
+  const inc = incoming(), out = S.trades.filter(t => t.from_id === S.user.id && tState(t) === 'open');
+  const old = S.trades.filter(t => tState(t) !== 'open').slice(0, 10);
+  const lab = {accepted: 'Accepted', declined: 'Declined', cancelled: 'Cancelled', expired: 'Expired', void: 'No longer possible'};
+  return '<h2>Trades</h2><p class="sub">To trade, open a friend\'s profile link while signed in and press Propose a trade. An offer stays open for 48 hours.</p>' +
+    '<h3 class="mono">Offers for you</h3>' + (inc.length ? inc.map(t => '<div class="card trade">' + tradeSides(t, 'to') + '<div class="row"><button class="btn primary" data-act="tacc" data-id="' + t.id + '">Accept</button><button class="btn" data-act="tdec" data-id="' + t.id + '">Decline</button><span class="chip">' + leftTxt(t) + '</span></div></div>').join('') : '<p class="empty">No offers waiting.</p>') +
+    '<h3 class="mono">Your offers</h3>' + (out.length ? out.map(t => '<div class="card trade"><div class="mono">To ' + esc(nm(t.to_id)) + '</div>' + tradeSides(t, 'from') + '<div class="row"><button class="btn" data-act="tcan" data-id="' + t.id + '">Cancel offer</button><span class="chip">' + leftTxt(t) + '</span></div></div>').join('') : '<p class="empty">You have not sent any offers.</p>') +
+    (old.length ? '<h3 class="mono">History</h3>' + old.map(t => '<div class="card trade done"><div class="row"><span class="mono">' + (t.from_id === S.user.id ? 'To ' + esc(nm(t.to_id)) : 'From ' + esc(nm(t.from_id))) + '</span><span class="grow"></span><span class="chip ' + (t.status === 'accepted' ? 'full' : '') + '">' + lab[tState(t)] + '</span></div>' + tradeSides(t, t.from_id === S.user.id ? 'from' : 'to') + '</div>').join('') : '');
+}
+async function loadMine(){
+  if (!S.user) return;
+  const r = await sb.from('cards').select('id,design_id,serial').eq('owner_id', S.user.id);
+  S.mine = r.error ? [] : r.data; render();
+}
+function tradeArea(p, m){
+  if (S.user && S.user.id === PUB) return '';
+  const name = p.profile.name || 'this player';
+  if (!S.user) return S.pubAuth ? '<p class="sub">Sign in or create an account to trade with ' + esc(name) + '.</p>' + authHtml() : '<div class="row" style="margin-bottom:12px"><button class="btn primary" data-act="psign">Sign in to trade</button></div>';
+  if (S.pt.sent) return '<div class="fin" role="status"><span class="ck" aria-hidden="true">✓</span><div class="tx"><b>Offer sent</b><br>Ask ' + esc(name) + ' to open Foil and check the Trades tab. The offer stays open for 48 hours.</div><button class="btn" data-act="pback">OK</button></div>';
+  if (!S.pt.open) return '<div class="row" style="margin-bottom:12px"><button class="btn primary" data-act="popen">Propose a trade</button></div>';
+  return '';
+}
+function pickGrid(list, side, m){
+  const tr = c => TIER_ORDER.indexOf(m[c.design_id].tier);
+  return '<div class="grid">' + list.filter(c => m[c.design_id]).sort((a, b) => tr(a) - tr(b) || a.serial - b.serial).map(c => {
+    const on = !!S.pt[side][c.id];
+    return '<div class="pick' + (on ? ' on' : '') + '" role="button" tabindex="0" aria-pressed="' + on + '" data-act="pk" data-side="' + side + '" data-id="' + c.id + '">' + cardHtml(m[c.design_id], c) + '</div>';
+  }).join('') + '</div>';
+}
+function builderHtml(p, m){
+  const name = p.profile.name || 'this player', g = Object.keys(S.pt.give).length, r = Object.keys(S.pt.get).length;
+  if (S.mine === null) return '<p class="empty">Loading your cards…</p>';
+  return '<h3 class="mono">You give · tap cards to select (max 6)</h3>' + (S.mine.length ? pickGrid(S.mine, 'give', m) : '<p class="empty">You have no cards to offer yet.</p>') +
+    '<h3 class="mono">You get from ' + esc(name) + ' · tap cards to select (max 6)</h3>' + (p.cards.length ? pickGrid(p.cards, 'get', m) : '<p class="empty">' + esc(name) + ' has no cards yet.</p>') +
+    '<div class="pbar"><span class="mono">Give ' + g + ' · Get ' + r + '</span><span class="grow"></span><button class="btn primary" data-act="psend"' + (g && r ? '' : ' disabled') + '>Send offer</button><button class="btn quiet" data-act="pcancel">Cancel</button></div>';
+}
 /* ---- public profile (?u=<id>): read-only, no sign-in ---- */
 async function loadPublic(){
   const r = await Promise.all([
@@ -367,12 +448,16 @@ function publicHtml(){
   return head + '<h2>' + esc(name) + '</h2>' +
     '<p class="sub">Cards owned: <b>' + mine.length + '</b> · Designs found: <b>' + Object.keys(found).length + ' of ' + S.designs.filter(d => !d.effect || d.effect === 'none').length + '</b>' +
     (top ? ' · Rarest: <b>' + esc(m[top.design_id].name) + ' #' + top.serial + (m[top.design_id].edition_size ? ' / ' + m[top.design_id].edition_size : '') + '</b>' : '') + '</p>' +
-    (sorted.length ? '<div class="grid">' + sorted.map(c => cardHtml(m[c.design_id], c)).join('') + '</div>' : '<p class="empty" style="margin-top:14px">No cards yet.</p>');
+    tradeArea(p, m) + (S.pt.open && S.user && !S.pt.sent ? builderHtml(p, m) : (sorted.length ? '<div class="grid">' + sorted.map(c => cardHtml(m[c.design_id], c)).join('') + '</div>' : '<p class="empty" style="margin-top:14px">No cards yet.</p>'));
 }
 async function shareLink(){
   const url = location.origin + location.pathname + '?u=' + S.user.id;
+  const name = S.profile && S.profile.name ? S.profile.name : 'My';
+  if (navigator.share) {
+    try { await navigator.share({title: 'Foil', text: name + (/s$/i.test(name) ? "'" : "'s") + ' Foil collection', url: url}); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
   try { await navigator.clipboard.writeText(url); toast('Profile link copied.'); return; } catch (e) {}
-  try { if (navigator.share) { await navigator.share({url: url}); return; } } catch (e) { return; }
   toast(url);
 }
 
@@ -383,8 +468,8 @@ function render(){
   const name = S.profile ? S.profile.name : '';
   app.innerHTML = '<header><span class="logo">FOIL</span><span class="grow"></span><span class="coins" id="coins">● ' + (S.profile ? S.profile.coins : 0) + ' coins</span>' +
     '<span class="mono">' + esc(name) + '</span><span class="tools"><button class="btn quiet" data-act="fs" aria-label="Change text size" title="Text size">Aa</button><button class="btn quiet" data-act="hc" aria-label="High contrast" aria-pressed="' + (PREF.hc ? 'true' : 'false') + '" title="High contrast">◐</button></span><button class="btn quiet" data-act="signOut">Sign out</button></header>' +
-    '<nav class="tabs">' + [['today', 'Today'], ['plan', 'Plan'], ['cards', 'Cards']].map(x => '<button class="tab" data-act="tab" data-v="' + x[0] + '"' + (S.tab === x[0] ? ' aria-current="page"' : '') + '>' + x[1] + '</button>').join('') + '</nav>' +
-    (S.tab === 'cards' ? cardsView() : S.tab === 'plan' ? planView() : todayView()) + (S.reveal ? revealHtml() : '');
+    '<nav class="tabs">' + [['today', 'Today'], ['plan', 'Plan'], ['cards', 'Cards'], ['trades', 'Trades' + (incoming().length ? ' (' + incoming().length + ')' : '')]].map(x => '<button class="tab" data-act="tab" data-v="' + x[0] + '"' + (S.tab === x[0] ? ' aria-current="page"' : '') + '>' + x[1] + '</button>').join('') + '</nav>' +
+    (S.tab === 'cards' ? cardsView() : S.tab === 'plan' ? planView() : S.tab === 'trades' ? tradesView() : todayView()) + (S.reveal ? revealHtml() : '');
   tick();
 }
 function tick(){
@@ -399,9 +484,11 @@ setInterval(tick, 1000);
 
 /* ---- events ---- */
 document.addEventListener('keydown', function(e){
+  const pk = e.target && e.target.closest && e.target.closest('.pick');
+  if (pk && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pk.click(); return; }
   if (PUB || !S.user || e.metaKey || e.ctrlKey || e.altKey) return;
   const tg = e.target && e.target.tagName; if (tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA') return;
-  const k = e.key, tabs = {'1': 'today', '2': 'plan', '3': 'cards'};
+  const k = e.key, tabs = {'1': 'today', '2': 'plan', '3': 'cards', '4': 'trades'};
   if (tabs[k]) { S.tab = tabs[k]; S.fin = null; render(); }
   else if (k === 'n' || k === 'N') { e.preventDefault(); S.tab = 'plan'; render(); const i = $('#n-t'); if (i) i.focus(); }
 });
@@ -413,6 +500,26 @@ document.addEventListener('click', function(e){
   else if (a === 'fs') { PREF.fs = ((PREF.fs || 0) + 1) % 3; savePrefs(); toast('Text size ' + ['normal', 'large', 'largest'][PREF.fs] + '.'); }
   else if (a === 'hc') { PREF.hc = !PREF.hc; savePrefs(); render(); }
   else if (a === 'finx') { S.fin = null; render(); }
+  else if (a === 'tacc') call('respond_trade', {p_id: id, p_accept: true}, null, r => toast({accepted: 'Trade done. The cards are in your collection.', void: 'That offer is no longer possible: a card changed owner.', expired: 'That offer expired.'}[r] || 'Done.'));
+  else if (a === 'tdec') call('respond_trade', {p_id: id, p_accept: false}, null, () => toast('Offer declined.'));
+  else if (a === 'tcan') call('cancel_trade', {p_id: id}, null, () => toast('Offer cancelled.'));
+  else if (a === 'psign') { S.pubAuth = true; render(); }
+  else if (a === 'popen') { S.pt = {open: true, sent: false, give: {}, get: {}}; if (S.mine === null) loadMine(); render(); }
+  else if (a === 'pcancel') { S.pt = {open: false, sent: false, give: {}, get: {}}; render(); }
+  else if (a === 'pback') { S.pt = {open: false, sent: false, give: {}, get: {}}; render(); }
+  else if (a === 'pk') {
+    const side = b.dataset.side, set = S.pt[side];
+    if (set[id]) delete set[id]; else if (Object.keys(set).length >= 6) { toast('You can pick up to 6 cards on each side.'); return; } else set[id] = 1;
+    const y = window.scrollY; render(); window.scrollTo(0, y);
+  }
+  else if (a === 'psend') {
+    if (S.busy) return; S.busy = true; b.disabled = true; b.textContent = '…';
+    sb.rpc('propose_trade', {p_to: PUB, p_give: Object.keys(S.pt.give), p_get: Object.keys(S.pt.get)}).then(function(r){
+      S.busy = false;
+      if (r.error) { toast(friendly(r.error.message)); render(); return; }
+      S.pt = {open: false, sent: true, give: {}, get: {}}; render(); window.scrollTo(0, 0);
+    });
+  }
   else if (a === 'signOut') { sb.auth.signOut(); }
   else if (a === 'roll') roll();
   else if (a === 'share') shareLink();
@@ -474,7 +581,13 @@ document.addEventListener('submit', async function(e){
   }
 });
 
-if (PUB) { render(); loadPublic(); }
+if (PUB) {
+  render(); loadPublic();
+  sb.auth.onAuthStateChange(function(ev, session){
+    S.user = session && session.user ? session.user : null;
+    if (S.user) { S.pubAuth = false; S.mine = null; loadMine(); } else { S.mine = null; render(); }
+  });
+}
 else sb.auth.onAuthStateChange(function(ev, session){
   if (session && session.user) {
     if (S.user && S.user.id === session.user.id) return;
