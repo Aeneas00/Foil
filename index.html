@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Foil">
+<meta name="theme-color" content="#14213D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Foil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Anton&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root{--bg:#F3E9D2;--paper:#FBF6E9;--ink:#14213D;--muted:#4A5470;--line:#D8CAA8;--accent:#D62839;--good:#16693F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) 16px calc(80px + env(safe-area-inset-bottom))}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:'Space Mono',monospace;letter-spacing:.06em;text-transform:uppercase;font-size:.75rem}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.logo{background:linear-gradient(#1B2B50,#14213D) padding-box,linear-gradient(135deg,#FFC300,#FF6FB5 30%,#7AD7F0 62%,#B8F28B) border-box;border:3px solid transparent;border-radius:12px;color:#F3E9D2;padding:4px 16px;font:400 1.6rem Anton,Impact,sans-serif;letter-spacing:.1em}
+.grow{flex:1}
+.coins{border:2px solid var(--ink);border-radius:999px;padding:4px 14px;background:var(--paper);font:700 .9rem 'Space Mono',monospace}
+.btn{border:2px solid var(--ink);background:var(--paper);border-radius:2px;padding:6px 12px;cursor:pointer;font:700 .75rem 'Space Mono',monospace;letter-spacing:.08em;text-transform:uppercase}
+.btn:hover:not(:disabled){background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover:not(:disabled){background:#a81d2b}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.quiet{border-color:transparent;background:none;color:var(--muted)}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--ink);margin-bottom:16px}
+.tab{border:0;background:none;padding:8px 14px;cursor:pointer;font:700 .75rem 'Space Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab[aria-current=page]{color:var(--ink);border-bottom-color:var(--accent)}
+h2{font:400 1.5rem Anton,Impact,sans-serif;letter-spacing:.03em;text-transform:uppercase;margin:0 0 4px}
+h3{margin:22px 0 8px}
+.sub{color:var(--muted);margin:0 0 12px}
+.card{background:var(--paper);border:2px solid var(--ink);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card.run{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.card.done{opacity:.6}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.title{font-weight:600;flex:1;min-width:140px;overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{border:1.5px solid var(--ink);border-radius:999px;padding:0 9px;font:700 .68rem 'Space Mono',monospace;letter-spacing:.05em;text-transform:uppercase;background:var(--bg)}
+.chip.full{background:#C6EBD6;border-color:var(--good);color:var(--good)}
+.chip.half{background:#F8DFB5}
+.chip.bad{background:#F6CCC6;border-color:var(--accent);color:var(--accent)}
+.stat{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;color:var(--muted)}
+.stat b{color:var(--ink)}
+form.add{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+form.add .wide{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:2px}
+input,select{border:2px solid var(--ink);border-radius:4px;background:var(--paper);padding:7px 9px;min-width:0;width:100%}
+.empty{color:var(--muted)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;max-width:calc(100vw - 32px);z-index:9}
+#toast[hidden]{display:none}
+.auth{max-width:380px;margin:8vh auto 0;text-align:center}
+.auth .card{text-align:left;padding:20px}
+.auth .logo{display:inline-block;font-size:3rem;margin-bottom:6px}
+.err{color:var(--accent);margin:8px 0 0}
+.ok{color:var(--good);margin:8px 0 0}
+@media(max-width:520px){form.add{grid-template-columns:1fr 1fr}}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:14px}
+.fc{border-radius:14px;padding:5px;aspect-ratio:5/7;box-shadow:0 8px 18px rgba(20,33,61,.25);position:relative;overflow:hidden}
+.fci{height:100%;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.fcn{font:400 .95rem/1.05 Anton,Impact,sans-serif;text-transform:uppercase;letter-spacing:.02em}
+.fcw{flex:1;border:2px solid;border-radius:5px;display:flex;align-items:center;justify-content:center;min-height:0}
+.fcw svg{width:60%;height:auto}
+.fcw b{font:400 3rem Anton,Impact,sans-serif;opacity:.4}
+.fcb{font:700 .65rem 'Space Mono',monospace;letter-spacing:.07em;text-transform:uppercase;padding:2px 6px;background:rgba(128,128,128,.22);border-radius:2px;align-self:flex-start}
+.fcs{text-align:right;font:700 .7rem 'Space Mono',monospace}
+.fsh{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 28%,rgba(255,255,255,.4) 42%,rgba(255,111,181,.16) 48%,rgba(122,215,240,.16) 54%,transparent 64%);background-size:250% 100%;animation:fsh 4.5s ease-in-out infinite}
+@keyframes fsh{0%{background-position:130% 0}60%,100%{background-position:-60% 0}}
+.fc.ghost{opacity:.5}
+.ov{position:fixed;inset:0;background:rgba(10,14,28,.7);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:20;padding:20px;color:#F3E9D2;cursor:pointer}
+.ov .fc{width:min(260px,70vw)}
+.ov .pop{animation:pop .5s cubic-bezier(.2,1.3,.4,1)}
+@keyframes pop{from{transform:scale(.3) rotate(-12deg);opacity:0}}
+.card.dressed{border:3px solid transparent}
+.mini{width:34px;height:34px;border:2px solid;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.mini svg{width:70%;height:70%}
+@media (prefers-reduced-motion:reduce){.fsh,.ov .pop{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+'use strict';
+const sb = window.supabase.createClient('https://zdomhwatvhybpnbzobjd.supabase.co', 'sb_publishable_OVCwGTdoFMZ5Q-EcUWsuaQ_s-3L_OXm');
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso = d => d.toLocaleDateString('en-CA');
+const today = () => iso(new Date());
+const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };
+const fmtDay = s => new Date(s + 'T12:00:00').toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short'});
+const PRI = {1: 'High', 2: 'Medium', 3: 'Low'};
+
+const S = {user: null, profile: null, tasks: [], designs: [], cards: [], reveal: null, tab: 'today', auth: 'in', err: '', info: '', busy: false, tzTried: false};
+
+/* ---- rules, mirrored from the server for display only. The server decides. ---- */
+const base = t => t.est_minutes == null ? 10 : ({1: 30, 2: 20}[t.priority] || 10);
+const isCommitted = t => !!t.committed_at && t.planned_for === today() && iso(new Date(t.committed_at)) < today();
+const worth = t => isCommitted(t) ? base(t) : Math.floor(base(t) / 2);
+const needMs = t => Math.max(Math.floor((t.est_minutes || 10) / 2), 5) * 60000;
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+
+let toastT;
+function toast(m){ const el = $('#toast'); el.textContent = m; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 3500); }
+
+/* ---- data ---- */
+async function load(){
+  const [p, t, d, c] = await Promise.all([
+    sb.from('profiles').select('*').eq('id', S.user.id).single(),
+    sb.from('tasks').select('*').eq('owner_id', S.user.id).order('created_at', {ascending: false}).limit(500),
+    sb.from('designs').select('*'),
+    sb.from('cards').select('*').eq('owner_id', S.user.id).order('minted_at', {ascending: false})
+  ]);
+  const bad = p.error || t.error || d.error || c.error;
+  if (bad) { toast('Could not load: ' + bad.message); return; }
+  S.profile = p.data; S.tasks = t.data; S.designs = d.data; S.cards = c.data;
+  render();
+  syncTz();
+}
+async function syncTz(){
+  if (S.tzTried || !S.profile) return; S.tzTried = true;
+  let tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!tz || tz === S.profile.tz) return;
+  let r = await sb.rpc('set_timezone', {p_tz: tz});
+  if (r.error && /Unknown/.test(r.error.message) && tz === 'Europe/Kyiv') r = await sb.rpc('set_timezone', {p_tz: 'Europe/Kiev'});
+  if (!r.error) { S.profile.tz = tz; }
+}
+async function call(fn, args, ok){
+  if (S.busy) return; S.busy = true;
+  const r = await sb.rpc(fn, args || {});
+  S.busy = false;
+  if (r.error) { toast(r.error.message); return; }
+  if (ok) ok(r.data);
+  await load();
+}
+
+/* ---- views ---- */
+function authHtml(){
+  const up = S.auth === 'up';
+  return '<div class="auth"><div class="logo">FOIL</div><p class="sub">Finish tasks. Earn coins. Collect cards.</p><div class="card">' +
+    '<div class="row" style="margin-bottom:12px"><button class="btn' + (up ? '' : ' primary') + '" data-act="auth" data-v="in" type="button">Sign in</button><button class="btn' + (up ? ' primary' : '') + '" data-act="auth" data-v="up" type="button">Create account</button></div>' +
+    '<form data-form="' + (up ? 'signUp' : 'signIn') + '" novalidate style="display:grid;gap:10px">' +
+    (up ? '<label class="f mono">Name<input id="a-n" autocomplete="name" maxlength="40"></label>' : '') +
+    '<label class="f mono">Email<input id="a-e" type="email" autocomplete="username"></label>' +
+    '<label class="f mono">Password<input id="a-p" type="password" autocomplete="' + (up ? 'new-password' : 'current-password') + '"></label>' +
+    (S.err ? '<p class="err" role="alert">' + esc(S.err) + '</p>' : '') + (S.info ? '<p class="ok" role="status">' + esc(S.info) + '</p>' : '') +
+    '<button class="btn primary" type="submit">' + (up ? 'Create account' : 'Sign in') + '</button></form></div></div>';
+}
+function dressOf(t){
+  if (!t.applied_card_id) return null;
+  const c = S.cards.find(x => x.id === t.applied_card_id), d = c && dmap()[c.design_id];
+  return d ? {d: d, c: c, x: TIERS[d.tier] || TIERS.base} : null;
+}
+const frameImg = f => /^linear/.test(f) ? f : 'linear-gradient(' + f + ',' + f + ')';
+const dressCls = t => dressOf(t) ? ' dressed' : '';
+const dressStyle = t => { const o = dressOf(t); return o ? ' style="background:linear-gradient(var(--paper),var(--paper)) padding-box,' + frameImg(o.x.frame) + ' border-box"' : ''; };
+function mini(t){
+  const o = dressOf(t); if (!o) return '';
+  return '<span class="mini" title="' + esc(o.d.name + ' #' + o.c.serial) + '" style="background:' + o.x.win + ';border-color:' + o.x.ink + '"><svg viewBox="0 0 100 100" fill="none" stroke="' + (PAL[o.d.palette] || o.x.ink) + '" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (ART[o.d.icon] || '') + '" fill-rule="evenodd"/></svg></span>';
+}
+function dressSel(t){
+  if (!S.cards.length || t.done_at) return '';
+  const m = dmap(), tr = c => TIER_ORDER.indexOf(m[c.design_id].tier);
+  return '<select data-chg="dress" data-id="' + t.id + '" aria-label="Apply a card" style="width:auto;font-size:.8rem"><option value="">No card</option>' +
+    S.cards.filter(c => m[c.design_id]).sort((a, b) => tr(a) - tr(b) || b.serial - a.serial).map(c => '<option value="' + c.id + '"' + (c.id === t.applied_card_id ? ' selected' : '') + '>' + esc(m[c.design_id].name) + ' #' + c.serial + ' · ' + TIERS[m[c.design_id].tier].n + '</option>').join('') + '</select>';
+}
+function chips(t){
+  const c = [];
+  if (t.priority) c.push('<span class="chip">' + PRI[t.priority] + '</span>');
+  if (t.est_minutes) c.push('<span class="chip">' + t.est_minutes + ' min</span>');
+  if (t.planned_for && t.planned_for < today() && !t.done_at) c.push('<span class="chip bad">Overdue</span>');
+  return c.join('');
+}
+function todayCard(t){
+  const run = !!t.started_at;
+  const com = isCommitted(t);
+  const pay = '<span class="chip ' + (com ? 'full' : 'half') + '">' + (com ? 'Committed' : 'Wildcard') + ' · +' + worth(t) + ' coins</span>';
+  let act;
+  if (!run) act = '<button class="btn primary" data-act="start" data-id="' + t.id + '">Start</button>';
+  else act = '<span class="mono tick" data-id="' + t.id + '"></span><button class="btn primary" id="done-' + t.id + '" data-act="done" data-id="' + t.id + '" disabled>Done</button><button class="btn quiet" data-act="stop" data-id="' + t.id + '">Stop</button>';
+  return '<div class="card' + (run ? ' run' : '') + dressCls(t) + '"' + dressStyle(t) + '><div class="row">' + mini(t) + '<span class="title">' + esc(t.title) + '</span>' + act + '<button class="btn quiet" data-act="del" data-id="' + t.id + '" aria-label="Delete task">×</button></div><div class="chips">' + chips(t) + pay + dressSel(t) + '</div></div>';
+}
+function todayView(){
+  const td = today(), list = S.tasks.filter(t => !t.done_at && t.planned_for && t.planned_for <= td)
+    .sort((a, b) => (b.started_at ? 1 : 0) - (a.started_at ? 1 : 0) || (a.priority || 4) - (b.priority || 4));
+  const doneToday = S.tasks.filter(t => t.done_at && iso(new Date(t.done_at)) === td);
+  const paid = doneToday.filter(t => t.coins_awarded > 0).length, wild = doneToday.filter(t => t.wildcard && t.coins_awarded > 0).length;
+  return '<h2>Today · ' + esc(fmtDay(td)) + '</h2><div class="stat mono"><span>Paid today <b>' + paid + '/5</b></span><span>Wildcards <b>' + wild + '/2</b></span></div>' +
+    (list.length ? list.map(todayCard).join('') : '<p class="empty">Nothing planned for today. Plan tomorrow in the Plan tab, or add a wildcard task there for today.</p>') +
+    (doneToday.length ? '<h3 class="mono">Finished today</h3>' + doneToday.map(t => '<div class="card done' + dressCls(t) + '"' + dressStyle(t) + '><div class="row">' + mini(t) + '<span class="title">' + esc(t.title) + '</span><span class="chip ' + (t.coins_awarded ? 'full' : '') + '">+' + t.coins_awarded + ' coins</span></div></div>').join('') : '');
+}
+function planCard(t){
+  const td = today(), future = t.planned_for && t.planned_for > td, com = !!t.committed_at && future;
+  return '<div class="card' + dressCls(t) + '"' + dressStyle(t) + '><div class="row">' + mini(t) + '<span class="title">' + esc(t.title) + '</span>' +
+    '<input type="date" value="' + esc(t.planned_for || '') + '" min="' + td + '" data-chg="date" data-id="' + t.id + '" style="width:auto" aria-label="Planned date">' +
+    (future ? (com ? '<span class="chip full">✓ Committed</span>' : '<button class="btn primary" data-act="commit" data-id="' + t.id + '">Commit</button>') : '') +
+    '<button class="btn quiet" data-act="del" data-id="' + t.id + '" aria-label="Delete task">×</button></div><div class="chips">' + chips(t) + (future && !com ? '<span class="chip half">Not committed · half coins</span>' : '') + dressSel(t) + '</div></div>';
+}
+function planView(){
+  const td = today(), tm = addDays(td, 1);
+  const open = S.tasks.filter(t => !t.done_at && (!t.planned_for || t.planned_for > td)).sort((a, b) => (a.planned_for || '9999').localeCompare(b.planned_for || '9999'));
+  return '<h2>Plan</h2><p class="sub">Commit a task the day before and it pays full coins. Tasks added for today are wildcards and pay half.</p>' +
+    '<div class="card"><form class="add" data-form="add" novalidate><label class="f mono wide">Task<input id="n-t" maxlength="140" autocomplete="off" placeholder="What needs doing?"></label>' +
+    '<label class="f mono">Priority<select id="n-p"><option value="">None</option><option value="1">High</option><option value="2">Medium</option><option value="3">Low</option></select></label>' +
+    '<label class="f mono">Minutes<input id="n-m" type="number" min="1" max="1440" placeholder="optional"></label>' +
+    '<label class="f mono">Day<input id="n-d" type="date" min="' + td + '" value="' + tm + '"></label>' +
+    '<div class="wide"><button class="btn primary" type="submit">Add task</button></div></form></div>' +
+    (open.length ? open.map(planCard).join('') : '<p class="empty">No upcoming tasks yet.</p>');
+}
+/* ---- cards ---- */
+const TIERS = {
+  base: {n: 'Base', frame: '#8D97B3', face: '#F3E9D2', ink: '#14213D', win: '#E8DCC0', shine: 0},
+  rare: {n: 'Rare', frame: 'linear-gradient(135deg,#7E1120,#D62839 28%,#FF7A88 50%,#D62839 72%,#8E1424)', face: '#FBF6E9', ink: '#14213D', win: '#F7C6CB', shine: 0},
+  foil: {n: 'Foil', frame: 'linear-gradient(135deg,#FFC300,#FF6FB5,#7AD7F0,#B8F28B)', face: '#FBF6E9', ink: '#14213D', win: '#FBEFB8', shine: 1},
+  legend: {n: 'Legend', frame: '#FFC300', face: '#14213D', ink: '#F3E9D2', win: '#1B2C52', shine: 1}
+};
+const TIER_ORDER = ['legend', 'foil', 'rare', 'base'];
+const ART = {list: 'M20 28h12v12H20z M42 34h38 M20 56h12v12H20z M42 62h38', bars: 'M20 80V54 M40 80V38 M60 80V46 M80 80V24', star: 'M50 14L58 42L86 50L58 58L50 86L42 58L14 50L42 42Z', crown: 'M16 72L20 34L38 52L50 28L62 52L80 34L84 72Z', plane: 'M14 46L86 18L66 84L48 60L14 46Z M48 60L86 18', lens: 'M42 18a24 24 0 100 48a24 24 0 100-48 M60 62L84 86', gear: 'M50 36a14 14 0 100 28a14 14 0 100-28 M50 14v14 M50 72v14 M14 50h14 M72 50h14 M25 25l10 10 M65 65l10 10 M75 25l-10 10 M35 65l-10 10', flag: 'M28 16V86 M28 20h46l-10 16 10 16H28', key: 'M30 50a14 14 0 100-1 M44 50h42 M70 50v14 M82 50v10', mail: 'M16 26h68v48H16z M16 28l34 26 34-26'};
+const PAL = {slate: '#4A5470', sand: '#A88B4A', ruby: '#B81F30', coral: '#E8604C', aurora: '#1FA58A', prism: '#7C5CFF', gold: '#FFC300'};
+const dmap = () => { const m = {}; S.designs.forEach(d => { m[d.id] = d; }); return m; };
+function cardHtml(d, c, cls){
+  const x = TIERS[d.tier] || TIERS.base, ghost = !c;
+  const serial = ghost ? (d.edition_size ? d.edition_size + ' copies' : 'Unlimited') : '#' + c.serial + (d.edition_size ? ' / ' + d.edition_size : '');
+  const win = ghost ? '<b aria-hidden="true">?</b>' : '<svg viewBox="0 0 100 100" fill="none" stroke="' + (PAL[d.palette] || x.ink) + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (ART[d.icon] || '') + '" fill-rule="evenodd"/></svg>';
+  return '<div class="fc' + (ghost ? ' ghost' : '') + (cls ? ' ' + cls : '') + '" style="background:' + x.frame + '" title="' + esc(d.name) + '"><div class="fci" style="background:' + x.face + ';color:' + x.ink + '"><div class="fcn">' + esc(d.name) + '</div>' +
+    '<div class="fcw" style="border-color:' + x.ink + ';background:' + x.win + '">' + win + '</div><div class="fcb">' + x.n + '</div><div class="fcs">' + serial + '</div>' + (x.shine && !ghost ? '<div class="fsh"></div>' : '') + '</div></div>';
+}
+function cardsView(){
+  const m = dmap(), tr = d => TIER_ORDER.indexOf(d.tier), coins = S.profile ? S.profile.coins : 0;
+  const mine = S.cards.filter(c => m[c.design_id]).sort((a, b) => tr(m[a.design_id]) - tr(m[b.design_id]) || b.serial - a.serial);
+  const owned = {}; mine.forEach(c => { owned[c.design_id] = 1; });
+  const missing = S.designs.filter(d => !owned[d.id]).sort((a, b) => tr(a) - tr(b) || a.name.localeCompare(b.name));
+  return '<h2>Cards</h2><p class="sub">Designs found: <b>' + Object.keys(owned).length + ' of ' + S.designs.length + '</b> · Cards owned: <b>' + mine.length + '</b></p>' +
+    '<div class="row"><button class="btn primary" data-act="roll"' + (coins < 50 ? ' disabled' : '') + '>Roll a card · 50 coins</button>' + (coins < 50 ? '<span class="empty">You have ' + coins + '. Finish ' + Math.ceil((50 - coins) / 10) + '+ more tasks.</span>' : '') + '</div>' +
+    (mine.length ? '<div class="grid">' + mine.map(c => cardHtml(m[c.design_id], c)).join('') + '</div>' : '<p class="empty" style="margin-top:14px">No cards yet. Earn 50 coins and roll.</p>') +
+    (missing.length ? '<h3 class="mono">Not found yet</h3><div class="grid">' + missing.map(d => cardHtml(d, null)).join('') + '</div>' : '');
+}
+function revealHtml(){
+  const m = dmap(), c = S.reveal, d = c && m[c.design_id]; if (!d) return '';
+  return '<div class="ov" data-act="closeRev" role="dialog" aria-label="New card">' + cardHtml(d, c, 'pop') + '<div class="mono">' + esc(TIERS[d.tier].n) + ' · ' + esc(d.name) + ' · #' + c.serial + (d.edition_size ? ' of ' + d.edition_size : '') + '</div><div class="mono" style="opacity:.7">Tap to continue</div></div>';
+}
+function roll(){
+  if (!S.profile || S.profile.coins < 50) { toast('You need 50 coins for a roll.'); return; }
+  call('roll_card', {}, c => { S.reveal = c; });
+}
+
+function render(){
+  const app = $('#app');
+  if (!S.user) { app.innerHTML = authHtml(); return; }
+  const name = S.profile ? S.profile.name : '';
+  app.innerHTML = '<header><span class="logo">FOIL</span><span class="grow"></span><span class="coins" id="coins">● ' + (S.profile ? S.profile.coins : 0) + ' coins</span>' +
+    '<span class="mono">' + esc(name) + '</span><button class="btn quiet" data-act="signOut">Sign out</button></header>' +
+    '<nav class="tabs">' + [['today', 'Today'], ['plan', 'Plan'], ['cards', 'Cards']].map(x => '<button class="tab" data-act="tab" data-v="' + x[0] + '"' + (S.tab === x[0] ? ' aria-current="page"' : '') + '>' + x[1] + '</button>').join('') + '</nav>' +
+    (S.tab === 'cards' ? cardsView() : S.tab === 'plan' ? planView() : todayView()) + (S.reveal ? revealHtml() : '');
+  tick();
+}
+function tick(){
+  document.querySelectorAll('.tick').forEach(function(el){
+    const t = S.tasks.find(x => x.id === el.dataset.id); if (!t || !t.started_at) return;
+    const left = needMs(t) - (Date.now() - new Date(t.started_at).getTime()), b = document.getElementById('done-' + t.id);
+    el.textContent = left > 0 ? 'Done in ' + mmss(left) : 'Ready';
+    if (b) b.disabled = left > 0;
+  });
+}
+setInterval(tick, 1000);
+
+/* ---- events ---- */
+document.addEventListener('click', function(e){
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const id = b.dataset.id, a = b.dataset.act;
+  if (a === 'auth') { S.auth = b.dataset.v; S.err = ''; S.info = ''; render(); }
+  else if (a === 'tab') { S.tab = b.dataset.v; render(); }
+  else if (a === 'signOut') { sb.auth.signOut(); }
+  else if (a === 'roll') roll();
+  else if (a === 'closeRev') { S.reveal = null; render(); }
+  else if (a === 'start') call('start_task', {p_id: id});
+  else if (a === 'stop') call('stop_task', {p_id: id});
+  else if (a === 'commit') call('commit_task', {p_id: id}, () => toast('Committed. It pays full coins on its day.'));
+  else if (a === 'del') call('delete_task', {p_id: id});
+  else if (a === 'done') call('complete_task', {p_id: id}, n => toast(n > 0 ? '+' + n + ' coins' : 'Finished. No coins: a daily or wildcard limit was reached.'));
+});
+document.addEventListener('change', async function(e){
+  const dr = e.target.closest('[data-chg="dress"]');
+  if (dr) {
+    const r0 = await sb.from('tasks').update({applied_card_id: dr.value || null}).eq('id', dr.dataset.id);
+    if (r0.error) toast(r0.error.message); else toast(dr.value ? 'Card applied.' : 'Card removed.');
+    load(); return;
+  }
+  const el = e.target.closest('[data-chg="date"]'); if (!el || !el.value) return;
+  if (el.value < today()) { toast('Pick today or a later day.'); render(); return; }
+  const r = await sb.from('tasks').update({planned_for: el.value}).eq('id', el.dataset.id);
+  if (r.error) toast(r.error.message); else toast('Moved. Commit it again for full coins.');
+  load();
+});
+document.addEventListener('submit', async function(e){
+  const f = e.target.closest('form[data-form]'); if (!f) return; e.preventDefault();
+  const k = f.dataset.form;
+  if (k === 'add') {
+    const title = $('#n-t').value.trim(); if (!title) { toast('Add a title.'); return; }
+    const d = $('#n-d').value || null; if (d && d < today()) { toast('Pick today or a later day.'); return; }
+    const m = parseInt($('#n-m').value, 10), p = parseInt($('#n-p').value, 10);
+    const r = await sb.from('tasks').insert({title: title, priority: p || null, est_minutes: m > 0 ? m : null, planned_for: d});
+    if (r.error) { toast(r.error.message); return; }
+    toast(d === today() ? 'Added for today as a wildcard.' : 'Added. Commit it to earn full coins.');
+    load(); return;
+  }
+  const em = $('#a-e').value.trim().toLowerCase(), pw = $('#a-p').value;
+  S.err = ''; S.info = '';
+  if (!em || !pw) { S.err = 'Enter your email and password.'; render(); return; }
+  if (k === 'signIn') {
+    const r = await sb.auth.signInWithPassword({email: em, password: pw});
+    if (r.error) { S.err = /invalid login/i.test(r.error.message) ? 'Wrong email or password.' : r.error.message; render(); }
+  } else {
+    const name = $('#a-n').value.trim();
+    if (!name) { S.err = 'Add your name.'; render(); return; }
+    if (pw.length < 8) { S.err = 'Password needs at least 8 characters.'; render(); return; }
+    const r = await sb.auth.signUp({email: em, password: pw, options: {data: {name: name}}});
+    if (r.error) { S.err = r.error.message; render(); }
+    else if (!r.data.session) { S.auth = 'in'; S.info = 'Check your email to confirm the address, then sign in.'; render(); }
+  }
+});
+
+sb.auth.onAuthStateChange(function(ev, session){
+  if (session && session.user) {
+    if (S.user && S.user.id === session.user.id) return;
+    S.user = session.user; S.tzTried = false; setTimeout(load, 0);
+  } else { S.user = null; S.profile = null; S.tasks = []; render(); }
+});
+render();
+})();
+</script>
+</body>
+</html>
